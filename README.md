@@ -115,6 +115,8 @@ python train.py -s <path to COLMAP or NeRF Synthetic dataset>
   Add this flag to use a MipNeRF360-style training/test split for evaluation.
   #### --resolution / -r
   Specifies resolution of the loaded images before training. If provided ```1, 2, 4``` or ```8```, uses original, 1/2, 1/4 or 1/8 resolution, respectively. For all other values, rescales the width to the given number while maintaining image aspect. **If not set and input image width exceeds 1.6K pixels, inputs are automatically rescaled to this target.**
+  #### --data_device
+  Specifies where to put the source image data, ```cuda``` by default, recommended to use ```cpu``` if training on large/high-resolution dataset, will reduce VRAM consumption, but slightly slow down training.
   #### --white_background / -w
   Add this flag to use white background instead of black (default), e.g., for evaluation of NeRF Synthetic dataset.
   #### --sh_degree
@@ -299,16 +301,14 @@ sudo apt install -y libglew-dev libassimp-dev libboost-all-dev libgtk-3-dev libo
 # Project setup
 cd SIBR_viewers
 cmake -Bbuild .
-cmake --build build --target install
+cmake --build build -j 24 --target install --config Release
 ``` 
 
 #### Ubuntu 20.04
-Backwards compatibility with Focal Fossa is not fully tested, but building SIBR should still work by first invoking
+Backwards compatibility with Focal Fossa is not fully tested, but building SIBR with CMake should still work after invoking
 ```shell
 git checkout fossa_compatibility
-git submodule update --init
 ```
-and then continuing with the steps for Ubuntu 22.04.
 
 ### Navigation in SIBR Viewers
 The SIBR interface provides several methods of navigating the scene. By default, you will be started with an FPS navigator, which you can control with ```W, A, S, D, Q, E``` for camera translation and ```I, K, J, L, U, O``` for rotation. Alternatively, you may want to use a Trackball-style navigator (select from the floating menu). You can also snap to a camera from the data set with the ```Snap to``` button or find the closest camera with ```Snap to closest```. The floating menues also allow you to change the navigation speed. You can use the ```Scaling Modifier``` to control the size of the displayed Gaussians, or show the initial point cloud.
@@ -361,7 +361,9 @@ After extracting or installing the viewers, you may run the compiled ```SIBR_gau
 
 It should suffice to provide the ```-m``` parameter pointing to a trained model directory. Alternatively, you can specify an override location for training input data using ```-s```. To use a specific resolution other than the auto-chosen one, specify ```--rendering-size <width> <height>```. Combine it with ```--force-aspect-ratio``` if you want the exact resolution and don't mind image distortion. 
 
-**To unlock the full frame rate, please disable V-Sync on your machine and also in the application (Menu &rarr; Display).**
+**To unlock the full frame rate, please disable V-Sync on your machine and also in the application (Menu &rarr; Display). In a multi-GPU system (e.g., laptop) your OpenGL/Display GPU should be the same as your CUDA GPU (e.g., by setting the application's GPU preference on Windows, see below) for maximum performance.**
+
+![Teaser image](assets/select.png)
 
 In addition to the intial point cloud and the splats, you also have the option to visualize the Gaussians by rendering them as ellipsoids from the floating menu.
 SIBR has many other functionalities, please see the [documentation](https://sibr.gitlabpages.inria.fr/) for more details on the viewer, navigation options etc. There is also a Top View (available from the menu) that shows the placement of the input cameras and the original SfM point cloud; please note that Top View slows rendering when enabled. The real-time viewer also uses slightly more aggressive, fast culling, which can be toggled in the floating menu. If you ever encounter an issue that can be solved by turning fast culling off, please let us know.
@@ -396,9 +398,9 @@ Our COLMAP loaders expect the following dataset structure in the source path loc
 |   |---...
 |---sparse
     |---0
-        |---cameras.bin  | cameras.txt
-        |---images.bin   | images.txt
-        |---points3D.bin | points3D.txt
+        |---cameras.bin
+        |---images.bin
+        |---points3D.bin
 ```
 
 For rasterization, the camera models must be either a SIMPLE_PINHOLE or PINHOLE camera. We provide a converter script ```convert.py```, to extract undistorted images and SfM information from input images. Optionally, you can use ImageMagick to resize the undistorted images. This rescaling is similar to MipNeRF360, i.e., it creates images with 1/2, 1/4 and 1/8 the original resolution in corresponding folders. To use them, please first install a recent version of COLMAP (ideally CUDA-powered) and ImageMagick. Put the images you want to use in a directory ```<location>/input```.
