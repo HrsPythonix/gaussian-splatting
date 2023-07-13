@@ -154,11 +154,11 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
 
         for config in validation_configs:
             if config['cameras'] and len(config['cameras']) > 0:
-                images = torch.tensor([], device="cuda")
-                gts = torch.tensor([], device="cuda")
+                images = torch.tensor([], device="cpu")
+                gts = torch.tensor([], device="cpu")
                 for idx, viewpoint in enumerate(config['cameras']):
-                    image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
-                    gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
+                    image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0).to("cpu")
+                    gt_image = torch.clamp(viewpoint.original_image.to("cpu"), 0.0, 1.0)
                     images = torch.cat((images, image.unsqueeze(0)), dim=0)
                     gts = torch.cat((gts, gt_image.unsqueeze(0)), dim=0)
                     if tb_writer and (idx < 5):
