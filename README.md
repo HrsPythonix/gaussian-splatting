@@ -72,7 +72,7 @@ The optimizer uses PyTorch and CUDA extensions in a Python environment to produc
 ### Software Requirements
 - Conda (recommended for easy setup)
 - C++ Compiler for PyTorch extensions (we used Visual Studio 2019 for Windows)
-- CUDA SDK 11.7+ for PyTorch extensions (we used 11.8, **known issues with 11.6**)
+- CUDA SDK 11 for PyTorch extensions (we used 11.8, **known issues with 11.6**)
 - C++ Compiler and CUDA SDK must be compatible
 
 ### Setup
@@ -83,6 +83,7 @@ SET DISTUTILS_USE_SDK=1 # Windows only
 conda env create --file environment.yml
 conda activate gaussian_splatting
 ```
+Please note that this process assumes that you have CUDA SDK **11** installed, not **12**. For modifications, see below.
 
 Tip: Downloading packages and creating a new environment with Conda can require a significant amount of disk space. By default, Conda will use the main system hard drive. You can avoid this by specifying a different package download location and an environment on a different drive:
 
@@ -92,7 +93,9 @@ conda env create --file environment.yml --prefix <Drive>/<env_path>/gaussian_spl
 conda activate <Drive>/<env_path>/gaussian_splatting
 ```
 
-If you can afford the disk space, we recommend using our environment files for setting up a training environment identical to ours. If you want to make modifications, please note that major version changes might affect the results of our method. However, our (limited) experiments suggest that the codebase works just fine inside a more up-to-date environment (Python 3.8, PyTorch 2.0.0, CUDA 11.8).
+#### Modifications
+
+If you can afford the disk space, we recommend using our environment files for setting up a training environment identical to ours. If you want to make modifications, please note that major version changes might affect the results of our method. However, our (limited) experiments suggest that the codebase works just fine inside a more up-to-date environment (Python 3.8, PyTorch 2.0.0, CUDA 12). Make sure to create an environment where PyTorch and its CUDA runtime version match and the installed CUDA SDK has no major version difference with PyTorch's CUDA version.
 
 ### Running
 
@@ -127,12 +130,26 @@ python train.py -s <path to COLMAP or NeRF Synthetic dataset>
   Flag to make pipeline compute forward and backward of the 3D covariance with PyTorch instead of ours.
   #### --iterations
   Number of total iterations to train for, ```30_000``` by default.
+  #### --ip
+  IP to start GUI server on, ```127.0.0.1``` by default.
+  #### --port 
+  Port to use for GUI server, ```6009``` by default.
+  #### --test_iterations
+  Space-separated iterations at which the training script computes L1 and PSNR over test set, ```7000 30000``` by default.
+  #### --save_iterations
+  Space-separated iterations at which the training script saves the Gaussian model, ```7000 30000 <iterations>``` by default.
+  #### --checkpoint_iterations
+  Space-separated iterations at which to store a checkpoint for continuing later, saved in the model directory.
+  #### --start_checkpoint
+  Path to a saved checkpoint to continue training from.
+  #### --quiet 
+  Flag to omit any text written to standard out pipe. 
   #### --feature_lr
   Spherical harmonics features learning rate, ```0.0025``` by default.
   #### --opacity_lr
   Opacity learning rate, ```0.05``` by default.
   #### --scaling_lr
-  Scaling learning rate, ```0.001``` by default.
+  Scaling learning rate, ```0.005``` by default.
   #### --rotation_lr
   Rotation learning rate, ```0.001``` by default.
   #### --position_lr_max_steps
@@ -157,18 +174,6 @@ python train.py -s <path to COLMAP or NeRF Synthetic dataset>
   Influence of SSIM on total loss from 0 to 1, ```0.2``` by default. 
   #### --percent_dense
   Percentage of scene extent (0--1) a point must exceed to be forcibly densified, ```0.1``` by default.
-  #### --ip
-  IP to start GUI server on, ```127.0.0.1``` by default.
-  #### --port 
-  Port to use for GUI server, ```6009``` by default.
-  #### --test_iterations
-  Space-separated iterations at which the training script computes L1 and PSNR over test set, ```7000 30000``` by default.
-  #### --save_iterations
-  Space-separated iterations at which the training script saves the Gaussian model, ```7000 30000 <iterations>``` by default.
-  #### --quiet 
-  Flag to omit any text written to standard out pipe. 
-  #### --data_device
-  Specify where to put the data on,```cuda``` by default, recommend use ```cpu``` if training on large scale/resolution dataset, will save a lot of VRAM required to train, but slightly slower the training
 
 </details>
 <br>
@@ -460,11 +465,17 @@ python convert.py -s <location> --skip_matching [--resize] #If not resizing, Ima
 ## FAQ
 - *Where do I get data sets, e.g., those referenced in ```full_eval.py```?* The MipNeRF360 data set is provided by the authors of the original paper on the project site. Note that two of the data sets cannot be openly shared and require you to consult the authors directly. For Tanks&Temples and Deep Blending, please use the download links provided at the top of the page.
 
+
+- *How can I use this for a much larger dataset, like a city district?* The current method was not designed for these, but given enough memory, it should work out. However, the approach can struggle in multi-scale detail scenes (extreme close-ups, mixed with far-away shots). This is usually the case in, e.g., driving data sets (cars close up, buildings far away). For such scenes, you can lower the ```--position_lr_init```, ```--position_lr_final``` and ```--scaling_lr``` (x0.3, x0.1, ...). The more extensive the scene, the lower these values should be. Below, we use default learning rates (left) and ```--position_lr_init 0.000016 --scaling_lr 0.001"``` (right).
+
+| ![Default learning rate result](assets/worse.png "title-1") <!-- --> | <!-- --> ![Reduced learning rate result](assets/better.png "title-2") |
+| --- | --- |
+
+
 - *I don't have 24 GB of VRAM for training, what do I do?* The VRAM consumption is determined by the number of points that are being optimized, which increases over time. If you only want to train to 7k iterations, you will need significantly less. To do the full training routine and avoid running out of memory, you can increase the ```--densify_grad_threshold```, ```--densification_interval``` or reduce the value of ```--densify_until_iter```. Note however that this will affect the quality of the result. Also try setting ```--test_iterations``` to ```-1``` to avoid memory spikes during testing. If ```--densify_grad_threshold``` is very high, no densification should occur and training should complete if the scene itself loads successfully.
 
 - *24 GB of VRAM for reference quality training is still a lot! Can't we do it with less?* Yes, most likely. By our calculations it should be possible with **way** less memory (~8GB). If we can find the time we will try to achieve this. If some PyTorch veteran out there wants to tackle this, we look forward to your pull request!
 
-- *How can I use this for a much larger dataset, like a city district?* Given enough memory, this should work out fine, but it will require to adapt the ```--scaling_lr``` and ```--position_lr_init/final```. To avoid manual tuning, a suggestion is to check the loss: if it diverges early on, reset and use a lower scaling / position learning rate.
 
 - *How can I use the differentiable Gaussian rasterizer for my own project?* Easy, it is included in this repo as a submodule ```diff-gaussian-rasterization```. Feel free to check out and install the package. It's not really documented, but using it from the Python side is very straightforward (cf. ```gaussian_renderer/__init__.py```).
 
