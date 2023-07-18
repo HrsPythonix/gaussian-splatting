@@ -35,6 +35,7 @@ class CameraInfo(NamedTuple):
     image_name: str
     width: int
     height: int
+    image_size: tuple
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -97,19 +98,25 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder
 
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
-        image = Image.open(image_path)
+        pil_image = Image.open(image_path)
+        image_size = pil_image.size
+        image = np.array(pil_image)
+        pil_image.close()
 
         mask = None
         if use_mask:
             try:
                 mask_path = os.path.join(mask_folder, os.path.basename(extr.name))
-                mask = Image.open(mask_path)
+                pil_mask = Image.open(mask_path)
+                assert pil_mask.size == image_size
+                mask = np.array(pil_mask)
+                pil_mask.close()
             except Exception as e:
                 print(e)
                 print(f"[Warning] No mask found at {mask_folder}" )
                 mask = None
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask,
+        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask, image_size=image_size,
                               image_path=image_path, image_name=image_name, width=width, height=height)
         cam_infos.append(cam_info)
     sys.stdout.write('\n')
@@ -154,7 +161,7 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, llffhold=8):
 
     reading_dir = "images" if images == None else images
     cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), mask_folder=os.path.join(path, "masks"), use_mask = use_mask)
-    cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
+    cam_infos = sorted(cam_infos_unsorted, key = lambda x : x.image_name)
 
     if eval:
         train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
