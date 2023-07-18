@@ -14,8 +14,11 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from math import exp
 
-def l1_loss(network_output, gt):
-    return torch.abs((network_output - gt)).mean()
+def l1_loss(network_output, gt, mask=None):
+    if mask is None:
+        return torch.abs((network_output - gt)).mean()
+    else:
+        return torch.abs((network_output - gt) * mask).mean()
 
 def l2_loss(network_output, gt):
     return ((network_output - gt) ** 2).mean()
@@ -30,13 +33,17 @@ def create_window(window_size, channel):
     window = Variable(_2D_window.expand(channel, 1, window_size, window_size).contiguous())
     return window
 
-def ssim(img1, img2, window_size=11, size_average=True):
+def ssim(img1, img2, window_size=11, size_average=True, mask=None):
     channel = img1.size(-3)
     window = create_window(window_size, channel)
 
     if img1.is_cuda:
         window = window.cuda(img1.get_device())
     window = window.type_as(img1)
+
+    if mask is not None:
+        img1 = img1 * mask
+        img2 = img2 * mask
 
     return _ssim(img1, img2, window, window_size, channel, size_average)
 
