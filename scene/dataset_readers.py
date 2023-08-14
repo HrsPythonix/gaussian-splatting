@@ -12,6 +12,7 @@
 import os
 import sys
 from PIL import Image
+import cv2
 from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
     read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
@@ -36,6 +37,7 @@ class CameraInfo(NamedTuple):
     width: int
     height: int
     image_size: tuple
+    blur_score: float
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -67,7 +69,13 @@ def getNerfppNorm(cam_info):
 
     return {"translate": translate, "radius": radius}
 
-def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder, use_mask=False, skip_loading=False):
+def variance_of_laplacian(image):
+    # compute the Laplacian of the image and then return the focus
+    # measure, which is simply the variance of the Laplacian
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(gray, cv2.CV_64F).var()
+
+def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder, use_mask=False, skip_loading=False, blur_filter=False):
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
@@ -103,6 +111,10 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder
         image = np.array(pil_image) if not skip_loading else None
         pil_image.close()
 
+        blur_score = None
+        if blur_filter:
+            blur_score = variance_of_laplacian(image)
+
         mask = None
         if use_mask:
             try:
@@ -119,8 +131,13 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder
                 mask = None
 
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask, image_size=image_size,
-                              image_path=image_path, image_name=image_name, width=width, height=height)
+                              image_path=image_path, image_name=image_name, width=width, height=height, blur_score=blur_score)
         cam_infos.append(cam_info)
+
+    if blur_filter:
+        cam_infos = sorted(cam_infos, key = lambda x : x.blur_score)
+        cam_infos = cam_infos[len(cam_infos) // 10 : ]
+    
     sys.stdout.write('\n')
     return cam_infos
 
@@ -149,7 +166,7 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, use_mask = False, skip_loading=False, llffhold=8):
+def readColmapSceneInfo(path, images, eval, use_mask = False, skip_loading=False, blur_filter=False, llffhold=8):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -162,7 +179,7 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, skip_loading=False
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
     reading_dir = "images" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), mask_folder=os.path.join(path, "masks"), use_mask = use_mask, skip_loading=skip_loading)
+    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), mask_folder=os.path.join(path, "masks"), use_mask = use_mask, skip_loading=skip_loading, blur_filter=blur_filter)
     cam_infos = sorted(cam_infos_unsorted, key = lambda x : x.image_name)
 
     if eval:
