@@ -38,7 +38,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     makedirs(render_path, exist_ok=True)
     makedirs(gts_path, exist_ok=True)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=48) as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
         total_start = time.time()
         render_time_count = 0
         submit_time_count = 0
