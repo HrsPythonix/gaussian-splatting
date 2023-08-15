@@ -128,7 +128,7 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
                     info['image_name'] = view.image_name + '.png'
                     info['output_path'] = f"/cfs/risheng/test/custom_3dgs/{idx}.png"
                     info['rotation'] = view.R.tolist()
-                    info['translation'] = view.T.tolist()
+                    info['location'] = view.T.tolist()
                     info['fx'] = fov2focal(view.FoVx, view.image_width)
                     info['fy'] = fov2focal(view.FoVy, view.image_height)
                     info['cx'] = -1
