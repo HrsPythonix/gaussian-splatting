@@ -75,8 +75,13 @@ def variance_of_laplacian(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     return cv2.Laplacian(gray, cv2.CV_64F).var()
 
-def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder, use_mask=False, skip_loading=False, blur_filter=False):
+def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder, use_mask=False, skip_loading=False, blur_filter=False, model_clip="", clip_info=""):
     cam_infos = []
+
+    img_cluster_infos = {}
+    if model_clip != "":
+            with open(clip_info, 'r') as f:
+                img_cluster_infos = json.load(f)
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
         # the exact output you're looking for:
@@ -87,6 +92,11 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder
         intr = cam_intrinsics[extr.camera_id]
         height = intr.height
         width = intr.width
+
+        if model_clip != "":
+            if model_clip not in img_cluster_infos[os.path.basename(extr.name)]:
+                print("skipping {}".format(os.path.basename(extr.name)))
+                continue
 
         uid = intr.id
         R = np.transpose(qvec2rotmat(extr.qvec))
@@ -166,7 +176,7 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, use_mask = False, skip_loading=False, blur_filter=False, llffhold=8):
+def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", skip_loading=False, blur_filter=False, llffhold=8):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -179,7 +189,10 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, skip_loading=False
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
     reading_dir = "images" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), mask_folder=os.path.join(path, "masks"), use_mask = use_mask, skip_loading=skip_loading, blur_filter=blur_filter)
+    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, 
+                                           images_folder=os.path.join(path, reading_dir), mask_folder=os.path.join(path, "masks"), 
+                                           use_mask = use_mask, skip_loading=skip_loading, blur_filter=blur_filter,
+                                           clip_info=os.path.join(path, "img_cluster_info.json"), model_clip=model_clip)
     cam_infos = sorted(cam_infos_unsorted, key = lambda x : x.image_name)
 
     if eval:
