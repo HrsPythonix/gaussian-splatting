@@ -35,7 +35,7 @@ def save_image(image, path):
     im = Image.fromarray(ndarr)
     im.save(path)
 
-def render_set(model_path, name, iteration, views, gaussians, pipeline, background, skip_loading, custom_paths=[]):
+def render_set(model_path, name, iteration, views, gaussians, pipeline, background, skip_loading, custom_paths=[], dumb=False):
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
     gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
 
@@ -50,6 +50,10 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         submit_time_count = 0
         pp_time_count = 0
         for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
+            if dumb:
+                while True:
+                    rendering = render(view, gaussians, pipeline, background)["render"]
+
             render_start = time.time()
             rendering = render(view, gaussians, pipeline, background)["render"]
             render_end = time.time()
@@ -87,7 +91,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         total_end = time.time()
         print(f"IO Finished! IO wait {total_end - io_wait_start}s, All time cost: {total_end - total_start}s")
 
-def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, skip_loading : bool, save_pose : bool, render_custom : bool, custom_path_json: str = ""):
+def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, skip_loading : bool, save_pose : bool, render_custom : bool, custom_path_json: str = "", dumb : bool = False):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False, skip_loading=skip_loading)
@@ -96,7 +100,7 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
         if not skip_train:
-            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, pipeline, background, skip_loading)
+            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, pipeline, background, skip_loading, dumb=dumb)
             
             if save_pose:
                 pose_info = []
@@ -175,6 +179,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_pose", action="store_true", default=False)
     parser.add_argument("--render_custom", action="store_true", default=False)
     parser.add_argument("--custom_path_json", type=str, default="")
+    parser.add_argument("--dumb", action="store_true", default=False)
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
 
@@ -183,4 +188,4 @@ if __name__ == "__main__":
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
-    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.skip_loading, args.save_pose, args.render_custom, args.custom_path_json)
+    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.skip_loading, args.save_pose, args.render_custom, args.custom_path_json, args.dumb)
