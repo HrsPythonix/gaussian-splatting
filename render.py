@@ -24,6 +24,7 @@ import concurrent.futures
 import time
 from PIL import Image
 import json
+import time
 
 from scene.cameras import Camera
 from utils.graphics_utils import focal2fov, fov2focal
@@ -52,6 +53,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
             if dumb:
                 while True:
+                    time.sleep(1 / 200)
                     rendering = render(view, gaussians, pipeline, background)["render"]
 
             render_start = time.time()
