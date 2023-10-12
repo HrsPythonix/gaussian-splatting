@@ -86,6 +86,11 @@ class OptimizationParams(ParamGroup):
         self.densify_from_iter = 500
         self.densify_until_iter = 15_000
         self.densify_grad_threshold = 0.0002
+        self.use_s3im_loss = False
+        self.s3im_kernel_size: int = 4
+        self.s3im_stride: int = 4
+        self.s3im_repeat_time: int = 10
+        self.s3im_patch_height: int = 32
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):

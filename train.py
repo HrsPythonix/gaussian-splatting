@@ -12,7 +12,7 @@
 import os
 import torch
 from random import randint
-from utils.loss_utils import l1_loss, ssim
+from utils.loss_utils import l1_loss, ssim, S3IM
 from gaussian_renderer import render, network_gui
 import sys
 from scene import Scene, GaussianModel
@@ -37,6 +37,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
         gaussians.restore(model_params, opt)
+
+    if opt.use_s3im_loss:
+        s3im_loss = S3IM(s3im_kernel_size=opt.s3im_kernel_size, s3im_stride=opt.s3im_stride, s3im_repeat_time=opt.s3im_repeat_time, s3im_patch_height=opt.s3im_patch_height)
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -86,7 +89,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
         Ll1 = l1_loss(image, gt_image)
-        loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
+        if opt.use_s3im_loss:
+            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * s3im_loss(image, gt_image)
+        else:
+            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
         loss.backward()
 
         iter_end.record()
