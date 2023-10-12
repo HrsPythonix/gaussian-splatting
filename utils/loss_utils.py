@@ -139,7 +139,9 @@ class S3IM(torch.nn.Module):
 
         return self._ssim(img1, img2, s3im_kernel, self.s3im_kernel_size, channel, self.size_average, s3im_stride=self.s3im_stride)
 
-    def forward(self, src_vec, tar_vec):
+    def forward(self, src_img, tar_img):
+        src_vec = src_img.reshape(3, -1).permute(1, 0)
+        tar_vec = tar_img.reshape(3, -1).permute(1, 0)
         loss = 0.0
         index_list = []
         for i in range(self.s3im_repeat_time):
