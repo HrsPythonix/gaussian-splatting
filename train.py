@@ -13,6 +13,7 @@ import os
 import torch
 from random import randint
 from utils.loss_utils import l1_loss, ssim
+from utils.general_utils import PathToTorch
 from gaussian_renderer import render, network_gui
 import sys
 from scene import Scene, GaussianModel
@@ -76,6 +77,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         if not viewpoint_stack:
             viewpoint_stack = scene.getTrainCameras().copy()
         viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+
+        if dataset.lazy_loading:
+            viewpoint_cam.original_image = PathToTorch(viewpoint_cam.image_path, viewpoint_cam.resolution).clamp(0.0, 1.0).to(viewpoint_cam.data_device)
+            viewpoint_cam.image_width = viewpoint_cam.original_image.shape[2]
+            viewpoint_cam.image_height = viewpoint_cam.original_image.shape[1]
+
+            if dataset.use_mask:
+                viewpoint_cam.gt_mask = PathToTorch(viewpoint_cam.mask_path, viewpoint_cam.resolution).clamp(0.0, 1.0).to(viewpoint_cam.data_device)
 
         # Render
         if (iteration - 1) == debug_from:

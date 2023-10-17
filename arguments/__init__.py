@@ -56,6 +56,7 @@ class ModelParams(ParamGroup):
         self.use_mask = False
         self.eval = False
         self.model_clip = ""
+        self.lazy_loading = False
         super().__init__(parser, "Loading Parameters", sentinel)
 
     def extract(self, args):
