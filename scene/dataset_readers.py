@@ -33,6 +33,7 @@ class CameraInfo(NamedTuple):
     image: np.array
     mask: np.array
     image_path: str
+    mask_path: str
     image_name: str
     width: int
     height: int
@@ -118,7 +119,8 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder
         image_name = os.path.basename(image_path).split(".")[0]
         pil_image = Image.open(image_path)
         image_size = pil_image.size
-        image = np.array(pil_image) if not skip_loading else None
+        #image = np.array(pil_image) if not skip_loading else None
+        image = None
         pil_image.close()
 
         blur_score = None
@@ -126,22 +128,24 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder
             blur_score = variance_of_laplacian(image)
 
         mask = None
+        mask_path = ""
         if use_mask:
             try:
                 mask = None
-                if not skip_loading:
-                    mask_path = os.path.join(mask_folder, os.path.basename(extr.name))
-                    pil_mask = Image.open(mask_path)
-                    assert pil_mask.size == image_size
-                    mask = np.array(pil_mask)
-                    pil_mask.close()
+                mask_path = os.path.join(mask_folder, os.path.basename(extr.name))
+                # if not skip_loading:
+                #     pil_mask = Image.open(mask_path)
+                #     assert pil_mask.size == image_size
+                #     mask = np.array(pil_mask)
+                #     pil_mask.close()
             except Exception as e:
                 print(e)
                 print(f"[Warning] No mask found at {mask_folder}" )
                 mask = None
+                mask_path = ""
 
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask, image_size=image_size,
-                              image_path=image_path, image_name=image_name, width=width, height=height, blur_score=blur_score)
+                              image_path=image_path, mask_path=mask_path, image_name=image_name, width=width, height=height, blur_score=blur_score)
         cam_infos.append(cam_info)
 
     if blur_filter:

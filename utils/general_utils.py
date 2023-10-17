@@ -15,9 +15,18 @@ from datetime import datetime
 import numpy as np
 import random
 import cv2
+from PIL import Image
+from torchvision import transforms as T
 
 def inverse_sigmoid(x):
     return torch.log(x/(1-x))
+
+def PathToTorch(image_path, resolution):
+    pil_image = Image.open(image_path)
+    resized_image_PIL = pil_image.resize(resolution)
+    resized_image = T.ToTensor()(resized_image_PIL)
+    pil_image.close()
+    return resized_image
 
 def PILtoTorch(np_image, resolution):
     resized_image_np = cv2.resize(np_image, resolution)
