@@ -79,12 +79,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
 
         if dataset.lazy_loading:
-            viewpoint_cam.original_image = PathToTorch(viewpoint_cam.image_path, viewpoint_cam.resolution).clamp(0.0, 1.0).to(viewpoint_cam.data_device)
-            viewpoint_cam.image_width = viewpoint_cam.original_image.shape[2]
-            viewpoint_cam.image_height = viewpoint_cam.original_image.shape[1]
-
-            if dataset.use_mask:
-                viewpoint_cam.gt_mask = PathToTorch(viewpoint_cam.mask_path, viewpoint_cam.resolution).clamp(0.0, 1.0).to(viewpoint_cam.data_device)
+            viewpoint_cam.image_width = viewpoint_cam.resolution[0]
+            viewpoint_cam.image_height = viewpoint_cam.resolution[1]
 
         # Render
         if (iteration - 1) == debug_from:
@@ -93,10 +89,15 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
         # Loss
-        gt_image = viewpoint_cam.original_image.cuda()
-        gt_mask = None
-        if (viewpoint_cam.gt_mask is not None) and (dataset.use_mask):
-            gt_mask = viewpoint_cam.gt_mask.cuda() 
+        gt_image = gt_mask = None
+        if dataset.lazy_loading:
+            gt_image = PathToTorch(viewpoint_cam.image_path, viewpoint_cam.resolution).clamp(0.0, 1.0).cuda()
+            if dataset.use_mask:
+                viewpoint_cam.gt_mask = PathToTorch(viewpoint_cam.mask_path, viewpoint_cam.resolution).clamp(0.0, 1.0).cuda()
+        else:
+            gt_image = viewpoint_cam.original_image.cuda()
+            if dataset.use_mask:
+                gt_mask = viewpoint_cam.gt_mask.cuda() 
         Ll1 = l1_loss(image, gt_image, mask = gt_mask)
         loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image, mask = gt_mask))
         loss.backward()
