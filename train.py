@@ -114,7 +114,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 progress_bar.close()
 
             # Log and save
-            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background))
+            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background), dataset.lazy_loading)
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
@@ -163,7 +163,7 @@ def prepare_output_and_logger(args):
         print("Tensorboard not available: not logging progress")
     return tb_writer
 
-def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs):
+def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs, lazy_loading):
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss.item(), iteration)
@@ -183,7 +183,10 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                 gts = torch.tensor([], device="cpu")
                 for idx, viewpoint in enumerate(config['cameras']):
                     image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0).to("cpu")
-                    gt_image = torch.clamp(viewpoint.original_image.to("cpu"), 0.0, 1.0)
+                    if lazy_loading:
+                        gt_image = PathToTorch(viewpoint.image_path, viewpoint.resolution).clamp(0.0, 1.0)
+                    else:
+                        gt_image = torch.clamp(viewpoint.original_image.to("cpu"), 0.0, 1.0)
                     images = torch.cat((images, image.unsqueeze(0)), dim=0)
                     gts = torch.cat((gts, gt_image.unsqueeze(0)), dim=0)
                     if tb_writer and (idx < 5):
