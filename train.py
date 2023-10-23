@@ -179,16 +179,16 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
             if config['cameras'] and len(config['cameras']) > 0:
                 l1_test = 0.0
                 psnr_test = 0.0
-                images = torch.tensor([], device="cpu")
-                gts = torch.tensor([], device="cpu")
+                #images = torch.tensor([], device="cpu")
+                #gts = torch.tensor([], device="cpu")
                 for idx, viewpoint in enumerate(config['cameras']):
                     image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0).to("cpu")
                     if lazy_loading:
                         gt_image = PathToTorch(viewpoint.image_path, viewpoint.resolution).clamp(0.0, 1.0)
                     else:
                         gt_image = torch.clamp(viewpoint.original_image.to("cpu"), 0.0, 1.0)
-                    images = torch.cat((images, image.unsqueeze(0)), dim=0)
-                    gts = torch.cat((gts, gt_image.unsqueeze(0)), dim=0)
+                    #images = torch.cat((images, image.unsqueeze(0)), dim=0)
+                    #gts = torch.cat((gts, gt_image.unsqueeze(0)), dim=0)
                     if tb_writer and (idx < 5):
                         tb_writer.add_images(config['name'] + "_view_{}/render".format(viewpoint.image_name), image[None], global_step=iteration)
                         if iteration == testing_iterations[0]:
