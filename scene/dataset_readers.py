@@ -96,7 +96,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, mask_folder
 
         if model_clip != "":
             if model_clip not in img_cluster_infos[os.path.basename(extr.name)]:
-                print("skipping {}".format(os.path.basename(extr.name)))
+                #print("skipping {}".format(os.path.basename(extr.name)))
                 continue
 
         uid = intr.id
@@ -197,6 +197,7 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", ski
                                            images_folder=os.path.join(path, reading_dir), mask_folder=os.path.join(path, "masks"), 
                                            use_mask = use_mask, skip_loading=skip_loading, blur_filter=blur_filter,
                                            clip_info=os.path.join(path, "img_cluster_info.json"), model_clip=model_clip)
+    print(f"[info] CLIP Size {len(cam_infos_unsorted)}")
     cam_infos = sorted(cam_infos_unsorted, key = lambda x : x.image_name)
 
     if eval:
