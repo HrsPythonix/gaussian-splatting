@@ -17,7 +17,7 @@ from utils.graphics_utils import getWorld2View2, getProjectionMatrix
 class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask, image_size,
                  image_name, uid, image_path, mask_path, resolution,
-                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", gt_mask = None,
+                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", gt_mask = None, znear=0.01, zfar=100.0,
                  ):
         super(Camera, self).__init__()
 
@@ -56,8 +56,8 @@ class Camera(nn.Module):
         if self.gt_mask is not None:
             self.gt_mask = self.gt_mask.clamp(0.0, 1.0).to(self.data_device)
 
-        self.zfar = 100.0
-        self.znear = 0.01
+        self.zfar = zfar
+        self.znear = znear
 
         self.trans = trans
         self.scale = scale

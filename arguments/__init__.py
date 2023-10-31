@@ -57,6 +57,8 @@ class ModelParams(ParamGroup):
         self.eval = False
         self.model_clip = ""
         self.lazy_loading = False
+        self.znear=0.01
+        self.zfar=100.0
         super().__init__(parser, "Loading Parameters", sentinel)
 
     def extract(self, args):
