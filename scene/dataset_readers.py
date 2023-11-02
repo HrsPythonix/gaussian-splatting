@@ -47,7 +47,7 @@ class SceneInfo(NamedTuple):
     nerf_normalization: dict
     ply_path: str
 
-def getNerfppNorm(cam_info):
+def getNerfppNorm(cam_info, init_scale=1.0):
     def get_center_and_diag(cam_centers):
         cam_centers = np.hstack(cam_centers)
         avg_cam_center = np.mean(cam_centers, axis=1, keepdims=True)
@@ -59,7 +59,7 @@ def getNerfppNorm(cam_info):
     cam_centers = []
 
     for cam in cam_info:
-        W2C = getWorld2View2(cam.R, cam.T)
+        W2C = getWorld2View2(cam.R, cam.T, scale=init_scale)
         C2W = np.linalg.inv(W2C)
         cam_centers.append(C2W[:3, 3:4])
 
@@ -180,7 +180,7 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", skip_loading=False, blur_filter=False, llffhold=8):
+def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", skip_loading=False, blur_filter=False, llffhold=8, init_scale=1.0):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -207,7 +207,7 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", ski
         train_cam_infos = cam_infos
         test_cam_infos = []
 
-    nerf_normalization = getNerfppNorm(train_cam_infos)
+    nerf_normalization = getNerfppNorm(train_cam_infos, init_scale)
 
     ply_path = os.path.join(path, "sparse/0/points3D.ply")
     bin_path = os.path.join(path, "sparse/0/points3D.bin")
@@ -218,6 +218,7 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", ski
             xyz, rgb, _ = read_points3D_binary(bin_path)
         except:
             xyz, rgb, _ = read_points3D_text(txt_path)
+        xyz *= init_scale
         storePly(ply_path, xyz, rgb)
     try:
         pcd = fetchPly(ply_path)

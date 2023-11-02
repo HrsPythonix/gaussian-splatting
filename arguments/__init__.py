@@ -59,6 +59,7 @@ class ModelParams(ParamGroup):
         self.lazy_loading = False
         self.znear=0.01
         self.zfar=100.0
+        self.init_scale=1.0
         super().__init__(parser, "Loading Parameters", sentinel)
 
     def extract(self, args):

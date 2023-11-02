@@ -55,7 +55,7 @@ def loadCam(args, id, cam_info, resolution_scale, skip_loading, lazy_loading):
         gt_mask = None
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, image_size=(orig_w, orig_h),
-                  FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
+                  FoVx=cam_info.FovX, FoVy=cam_info.FovY, scale=args.init_scale,
                   image=gt_image, gt_alpha_mask=loaded_mask, resolution = resolution,
                   image_path=cam_info.image_path, mask_path=cam_info.mask_path,
                   image_name=cam_info.image_name, uid=id, data_device=args.data_device, gt_mask=gt_mask, znear=args.znear, zfar=args.zfar)
