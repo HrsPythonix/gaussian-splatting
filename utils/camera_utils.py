@@ -68,14 +68,14 @@ def cameraList_from_camInfos(cam_infos, resolution_scale, args, skip_loading=Fal
 
     return camera_list
 
-def camera_to_JSON(id, camera : Camera):
+def camera_to_JSON(id, camera : Camera, scale=1.0):
     Rt = np.zeros((4, 4))
     Rt[:3, :3] = camera.R.transpose()
     Rt[:3, 3] = camera.T
     Rt[3, 3] = 1.0
 
     W2C = np.linalg.inv(Rt)
-    pos = W2C[:3, 3]
+    pos = W2C[:3, 3] * scale
     rot = W2C[:3, :3]
     serializable_array_2d = [x.tolist() for x in rot]
     camera_entry = {
