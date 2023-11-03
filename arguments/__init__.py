@@ -60,6 +60,8 @@ class ModelParams(ParamGroup):
         self.znear=0.01
         self.zfar=100.0
         self.init_scale=1.0
+        self.add_background_sphere=False
+        self.force_reinit_ply=False
         super().__init__(parser, "Loading Parameters", sentinel)
 
     def extract(self, args):

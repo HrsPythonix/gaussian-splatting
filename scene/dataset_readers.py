@@ -180,7 +180,7 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", skip_loading=False, blur_filter=False, llffhold=8, init_scale=1.0):
+def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", skip_loading=False, blur_filter=False, llffhold=8, init_scale=1.0, add_background_sphere=False, force_reinit_ply=False):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -212,13 +212,40 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", ski
     ply_path = os.path.join(path, "sparse/0/points3D.ply")
     bin_path = os.path.join(path, "sparse/0/points3D.bin")
     txt_path = os.path.join(path, "sparse/0/points3D.txt")
-    if not os.path.exists(ply_path):
+    if (not os.path.exists(ply_path)) or force_reinit_ply:
         print("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
         try:
             xyz, rgb, _ = read_points3D_binary(bin_path)
         except:
             xyz, rgb, _ = read_points3D_text(txt_path)
         xyz *= init_scale
+
+        if add_background_sphere:
+            background_sphere_distance = 10
+            background_sphere_points = 204800
+
+            # find the scene center and size
+            point_max_coordinate = np.max(xyz, axis=0)
+            point_min_coordinate = np.min(xyz, axis=0)
+            scene_center = (point_max_coordinate + point_min_coordinate) / 2
+            scene_size = np.max(point_max_coordinate - point_min_coordinate)
+            # build unit sphere points
+            n_points = background_sphere_points
+            samples = np.arange(n_points)
+            y = 1 - (samples / float(n_points - 1)) * 2  # y goes from 1 to -1
+            radius = np.sqrt(1 - y * y)  # radius at y
+            phi = math.pi * (math.sqrt(5.) - 1.)  # golden angle in radians
+            theta = phi * samples  # golden angle increment
+            x = np.cos(theta) * radius
+            z = np.sin(theta) * radius
+            unit_sphere_points = np.concatenate([x[:, None], y[:, None], z[:, None]], axis=1)
+            # build background sphere
+            background_sphere_point_xyz = (unit_sphere_points * scene_size * background_sphere_distance) + scene_center
+            background_sphere_point_rgb = np.asarray(np.random.random(background_sphere_point_xyz.shape) * 255, dtype=np.uint8)
+            # add background sphere to scene
+            xyz = np.concatenate([xyz, background_sphere_point_xyz], axis=0)
+            rgb = np.concatenate([rgb, background_sphere_point_rgb], axis=0)
+        
         storePly(ply_path, xyz, rgb)
     try:
         pcd = fetchPly(ply_path)
