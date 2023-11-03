@@ -62,6 +62,8 @@ class ModelParams(ParamGroup):
         self.init_scale=1.0
         self.add_background_sphere=False
         self.force_reinit_ply=False
+        self.background_sphere_distance=1.0
+        self.background_sphere_points=204800
         super().__init__(parser, "Loading Parameters", sentinel)
 
     def extract(self, args):

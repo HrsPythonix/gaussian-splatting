@@ -181,7 +181,10 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", skip_loading=False, blur_filter=False, llffhold=8, init_scale=1.0, add_background_sphere=False, force_reinit_ply=False):
+def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", skip_loading=False, 
+                        blur_filter=False, llffhold=8, init_scale=1.0, 
+                        add_background_sphere=False, background_sphere_distance=1.0, background_sphere_points=204800,
+                        force_reinit_ply=False):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -222,9 +225,6 @@ def readColmapSceneInfo(path, images, eval, use_mask = False, model_clip="", ski
         xyz *= init_scale
 
         if add_background_sphere:
-            background_sphere_distance = 10
-            background_sphere_points = 204800
-
             # find the scene center and size
             point_max_coordinate = np.max(xyz, axis=0)
             point_min_coordinate = np.min(xyz, axis=0)
