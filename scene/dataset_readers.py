@@ -11,6 +11,7 @@
 
 import os
 import sys
+import math
 from PIL import Image
 import cv2
 from typing import NamedTuple
