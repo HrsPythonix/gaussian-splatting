@@ -39,6 +39,10 @@ class ParamGroup:
 
     def extract(self, args):
         group = GroupParams()
+
+        for default_arg in vars(self):
+            setattr(group, default_arg, getattr(self, default_arg))
+
         for arg in vars(args).items():
             if arg[0] in vars(self) or ("_" + arg[0]) in vars(self):
                 setattr(group, arg[0], arg[1])
