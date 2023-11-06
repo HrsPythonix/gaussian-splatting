@@ -24,6 +24,7 @@ parser.add_argument("--colmap_executable", default="", type=str)
 parser.add_argument("--resize", action="store_true")
 parser.add_argument("--magick_executable", default="", type=str)
 parser.add_argument("--vocab_tree_path", default="", type=str)
+parser.add_argument("--use_vocab_matcher", action='store_true')
 args = parser.parse_args()
 colmap_command = '"{}"'.format(args.colmap_executable) if len(args.colmap_executable) > 0 else "colmap"
 magick_command = '"{}"'.format(args.magick_executable) if len(args.magick_executable) > 0 else "magick"
@@ -45,9 +46,14 @@ if not args.skip_matching:
         exit(exit_code)
 
     ## Feature matching
-    feat_matching_cmd = colmap_command + " vocab_tree_matcher \
-        --database_path " + args.source_path + "/distorted/database.db \
-        --SiftMatching.use_gpu " + str(use_gpu) + " --VocabTreeMatching.vocab_tree_path " + args.vocab_tree_path
+    if args.use_vocab_matcher:
+        feat_matching_cmd = colmap_command + " vocab_tree_matcher \
+            --database_path " + args.source_path + "/distorted/database.db \
+            --SiftMatching.use_gpu " + str(use_gpu) + " --VocabTreeMatching.vocab_tree_path " + args.vocab_tree_path
+    else:
+        feat_matching_cmd = colmap_command + " exhaustive_matcher \
+            --database_path " + args.source_path + "/distorted/database.db \
+            --SiftMatching.use_gpu " + str(use_gpu)
     exit_code = os.system(feat_matching_cmd)
     if exit_code != 0:
         logging.error(f"Feature matching failed with code {exit_code}. Exiting.")
