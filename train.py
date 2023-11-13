@@ -182,6 +182,10 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                 #images = torch.tensor([], device="cpu")
                 #gts = torch.tensor([], device="cpu")
                 for idx, viewpoint in enumerate(config['cameras']):
+                    if lazy_loading:
+                        viewpoint.image_width = viewpoint.resolution[0]
+                        viewpoint.image_height = viewpoint.resolution[1]
+
                     image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0).to("cpu")
                     if lazy_loading:
                         gt_image = PathToTorch(viewpoint.image_path, viewpoint.resolution).clamp(0.0, 1.0)
